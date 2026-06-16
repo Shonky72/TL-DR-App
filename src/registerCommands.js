@@ -29,6 +29,18 @@ const commands = [
     .setName("deletedata")
     .setDescription("Delete all data TL;DR Bot has stored about you (API key + history)")
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("recap")
+    .setDescription("Summarise the last 24 hours in this channel, regardless of when you last checked")
+    .addIntegerOption((opt) =>
+      opt
+        .setName("hours")
+        .setDescription("How many hours to look back (default 24, max 168)")
+        .setMinValue(1)
+        .setMaxValue(168)
+    )
+    .toJSON(),
 ];
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);

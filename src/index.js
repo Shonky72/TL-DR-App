@@ -43,6 +43,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await handleTldr(interaction);
   } else if (interaction.commandName === "deletedata") {
     await handleDeleteData(interaction);
+  } else if (interaction.commandName === "recap") {
+    await handleRecap(interaction);
   }
 });
 
@@ -99,6 +101,47 @@ async function handleTldr(interaction) {
       content: `**TL;DR for #${channel.name}** (${formatted.length} messages since ${
         lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
       })\n\n${summary}`,
+    });
+  } catch (err) {
+    console.error(err);
+    const isPermission = err.code === 50001 || err.code === 50013;
+    await interaction.editReply({
+      content: isPermission
+        ? "I don't have permission to read message history in this channel. Ask a server admin to grant me **View Channel** and **Read Message History**."
+        : "Something went wrong generating the summary. Your API key may be invalid or over quota — you can update it with `/setup`.",
+    });
+  }
+}
+
+async function handleRecap(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const userApiKey = getUserApiKey(interaction.user.id);
+  if (!userApiKey) {
+    return interaction.editReply({
+      content:
+        "You haven't set up an API key yet. Run `/setup api_key:YOUR_KEY` first.\n\nGet a free key from:\n• **Anthropic:** https://console.anthropic.com\n• **OpenAI:** https://platform.openai.com\n• **Google:** https://aistudio.google.com",
+    });
+  }
+
+  const channel = interaction.channel;
+  const hours = interaction.options.getInteger("hours") ?? DEFAULT_HOURS;
+  const since = Date.now() - hours * 60 * 60 * 1000;
+
+  try {
+    const messages = await fetchMessagesSince(channel, since);
+    const formatted = messages
+      .filter((m) => !m.author.bot)
+      .map((m) => ({
+        author: m.member?.displayName ?? m.author.username,
+        content: describeMessage(m),
+        timestamp: m.createdAt,
+      }));
+
+    const summary = await summarizeMessages(formatted, channel.name, userApiKey);
+
+    await interaction.editReply({
+      content: `**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}`,
     });
   } catch (err) {
     console.error(err);
