@@ -198,11 +198,13 @@ function buildTally(messages) {
       `<${animated ? "a" : ""}:${name}:${id}> ×${count}`
     ).join("  ");
 
-  // Emoji-only message — renders large in Discord (capped at 10 per emoji)
+  // Podium card — emoji-only so Discord renders them large
+  const medals = ["🥇", "🥈", "🥉"];
   const card = entries
-    .map(({ animated, name, id, count }) => {
+    .map(({ animated, name, id, count }, i) => {
       const tag = `<${animated ? "a" : ""}:${name}:${id}>`;
-      return Array(Math.min(count, 10)).fill(tag).join("");
+      const medal = medals[i] ?? "";
+      return medal + tag.repeat(Math.max(1, Math.min(count, 5)));
     })
     .join("\n");
 
