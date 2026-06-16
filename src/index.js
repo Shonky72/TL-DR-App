@@ -6,6 +6,7 @@ import { detectProviderName } from "./providers.js";
 
 const MAX_MESSAGES = 500;
 const DEFAULT_HOURS = 24;
+const DISCORD_MAX_LENGTH = 1900;
 
 const client = new Client({
   intents: [
@@ -98,9 +99,9 @@ async function handleTldr(interaction) {
     setLastChecked(userId, channel.id, Date.now());
 
     await interaction.editReply({
-      content: `**TL;DR for #${channel.name}** (${formatted.length} messages since ${
+      content: truncate(`**TL;DR for #${channel.name}** (${formatted.length} messages since ${
         lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
-      })\n\n${summary}`,
+      })\n\n${summary}`),
     });
   } catch (err) {
     console.error(err);
@@ -141,7 +142,7 @@ async function handleRecap(interaction) {
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
 
     await interaction.editReply({
-      content: `**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}`,
+      content: truncate(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}`),
     });
   } catch (err) {
     console.error(err);
@@ -160,6 +161,11 @@ async function handleDeleteData(interaction) {
   await interaction.editReply({
     content: "✅ All your data has been deleted (API key + channel history). You'll need to run `/setup` again to use `/tldr`.",
   });
+}
+
+function truncate(text) {
+  if (text.length <= DISCORD_MAX_LENGTH) return text;
+  return text.slice(0, DISCORD_MAX_LENGTH) + "\n…*(summary truncated — too many messages)*";
 }
 
 function describeMessage(message) {
