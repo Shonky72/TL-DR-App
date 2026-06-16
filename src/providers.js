@@ -13,8 +13,12 @@ export function detectProviderName(apiKey) {
   return p === "anthropic" ? "Anthropic" : p === "google" ? "Google" : "OpenAI / compatible";
 }
 
-const PROMPT = (channelName, count) =>
-  `You are summarizing a Discord channel called #${channelName} for someone who was away (${count} messages). Write a concise TL;DR: group by topic/conversation thread, call out anything important, mentions, decisions, or questions directed at them. Keep it skimmable with bullet points. Don't pad it out.`;
+const PROMPT = (channelName, count) => {
+  const tight = count > 150
+    ? " This is a high-volume channel so be extra concise — max 2 bullet points per topic, no filler, prioritise decisions and action items."
+    : "";
+  return `You are summarizing a Discord channel called #${channelName} for someone who was away (${count} messages). Write a concise TL;DR: group by topic/conversation thread, call out anything important, mentions, decisions, or questions directed at them. Keep it skimmable with bullet points. Don't pad it out.${tight}`;
+};
 
 export async function summarizeWithKey(messages, channelName, apiKey) {
   if (messages.length === 0) return "No new messages since you last checked.";
@@ -29,7 +33,7 @@ export async function summarizeWithKey(messages, channelName, apiKey) {
     const client = new Anthropic({ apiKey });
     const res = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 600,
+      max_tokens: 1800,
       messages: [{ role: "user", content: `${PROMPT(channelName, messages.length)}\n\nTranscript:\n${transcript}` }],
     });
     return res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
@@ -46,7 +50,7 @@ export async function summarizeWithKey(messages, channelName, apiKey) {
   const client = new OpenAI({ apiKey });
   const res = await client.chat.completions.create({
     model: "gpt-4o-mini",
-    max_tokens: 600,
+    max_tokens: 1800,
     messages: [{ role: "user", content: `${PROMPT(channelName, messages.length)}\n\nTranscript:\n${transcript}` }],
   });
   return res.choices[0].message.content ?? "";

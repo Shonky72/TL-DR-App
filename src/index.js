@@ -99,11 +99,14 @@ async function handleTldr(interaction) {
 
     setLastChecked(userId, channel.id, Date.now());
 
-    await interaction.editReply({
-      content: truncate(`**TL;DR for #${channel.name}** (${formatted.length} messages since ${
-        lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
-      })\n\n${summary}${tally}`),
-    });
+    const header = `**TL;DR for #${channel.name}** (${formatted.length} messages since ${
+      lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
+    })`;
+    const chunks = splitIntoChunks(`${header}\n\n${summary}${tally}`);
+    await interaction.editReply({ content: chunks[0] });
+    for (const chunk of chunks.slice(1)) {
+      await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
+    }
   } catch (err) {
     console.error(err);
     const isPermission = err.code === 50001 || err.code === 50013;
@@ -143,9 +146,11 @@ async function handleRecap(interaction) {
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
     const tally = buildTally(messages);
 
-    await interaction.editReply({
-      content: truncate(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}${tally}`),
-    });
+    const chunks = splitIntoChunks(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}${tally}`);
+    await interaction.editReply({ content: chunks[0] });
+    for (const chunk of chunks.slice(1)) {
+      await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
+    }
   } catch (err) {
     console.error(err);
     const isPermission = err.code === 50001 || err.code === 50013;
@@ -199,9 +204,21 @@ function buildTally(messages) {
   return lines.length > 0 ? "\n\n" + lines.join("\n") : "";
 }
 
-function truncate(text) {
-  if (text.length <= DISCORD_MAX_LENGTH) return text;
-  return text.slice(0, DISCORD_MAX_LENGTH) + "\n…*(summary truncated — too many messages)*";
+function splitIntoChunks(text) {
+  if (text.length <= DISCORD_MAX_LENGTH) return [text];
+  const chunks = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= DISCORD_MAX_LENGTH) {
+      chunks.push(remaining);
+      break;
+    }
+    let cutAt = remaining.lastIndexOf("\n", DISCORD_MAX_LENGTH);
+    if (cutAt < 500) cutAt = DISCORD_MAX_LENGTH;
+    chunks.push(remaining.slice(0, cutAt));
+    remaining = remaining.slice(cutAt).trimStart();
+  }
+  return chunks;
 }
 
 function describeMessage(message) {
