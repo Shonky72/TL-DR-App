@@ -182,24 +182,35 @@ function buildTally(messages) {
 
   for (const msg of messages) {
     if (msg.author.bot) continue;
+    // Count custom emoji in message text
     const matches = msg.content.matchAll(/<(a?):(\w+):(\d+)>/g);
     for (const [, animated, name, id] of matches) {
       const key = `${name}:${id}`;
       if (!emojis[key]) emojis[key] = { animated: animated === "a", name, id, count: 0 };
       emojis[key].count++;
     }
+    // Count custom emoji reactions
+    for (const reaction of msg.reactions.cache.values()) {
+      if (!reaction.emoji.id) continue;
+      const key = `${reaction.emoji.name}:${reaction.emoji.id}`;
+      if (!emojis[key]) emojis[key] = { animated: reaction.emoji.animated ?? false, name: reaction.emoji.name, id: reaction.emoji.id, count: 0 };
+      emojis[key].count += reaction.count;
+    }
   }
 
   const entries = Object.values(emojis).sort((a, b) => b.count - a.count);
   if (entries.length === 0) return { tallyLine: "", card: "" };
 
-  // Podium card — one emoji per line with medal and count
   const medals = ["🥇", "🥈", "🥉"];
+  const digitEmoji = ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+  const toEmojiNum = (n) => String(n).split("").map(d => digitEmoji[+d]).join("");
+
+  // Podium card — pure emoji so Discord renders large
   const card = entries
     .map(({ animated, name, id, count }, i) => {
       const tag = `<${animated ? "a" : ""}:${name}:${id}>`;
       const medal = medals[i] ?? "▫️";
-      return `${medal} ${tag} ×${count}`;
+      return `${medal}${tag}${toEmojiNum(count)}`;
     })
     .join("\n");
 
