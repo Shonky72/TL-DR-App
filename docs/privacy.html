@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TL;DR Bot — Privacy Policy</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 720px; margin: 60px auto; padding: 0 24px; color: #1a1a2e; line-height: 1.7; }
+    h1 { font-size: 2rem; margin-bottom: 4px; }
+    .subtitle { color: #555; margin-bottom: 40px; }
+    h2 { font-size: 1.1rem; margin-top: 36px; text-transform: uppercase; letter-spacing: 0.05em; color: #444; }
+    p, li { font-size: 0.97rem; }
+    ul { padding-left: 1.4em; }
+    a { color: #5865f2; }
+    footer { margin-top: 60px; font-size: 0.85rem; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>TL;DR Bot</h1>
+  <p class="subtitle">Privacy Policy &mdash; Last updated June 2026</p>
+
+  <h2>What we collect</h2>
+  <p>TL;DR Bot stores the minimum data needed to function:</p>
+  <ul>
+    <li><strong>Your Discord user ID</strong> — to associate your settings with your account.</li>
+    <li><strong>Your AI API key</strong> — provided by you via <code>/setup</code>. This is used solely to call your chosen AI provider when you run <code>/tldr</code>.</li>
+    <li><strong>Channel last-checked timestamps</strong> — so the bot knows how far back to look when you run <code>/tldr</code> in a channel.</li>
+  </ul>
+  <p>We do <strong>not</strong> store message content. Discord messages are fetched on demand, summarised transiently, and never written to disk.</p>
+
+  <h2>How data is stored</h2>
+  <p>All data is stored in a private, encrypted volume on <a href="https://fly.io" target="_blank">Fly.io</a> infrastructure. It is never sold, shared, or transmitted to any third party other than the AI provider you chose when you ran <code>/setup</code>.</p>
+  <p>Your API key is sent directly to your chosen provider (Anthropic, OpenAI, Google, etc.) when generating a summary. TL;DR Bot does not log or inspect the content of API responses.</p>
+
+  <h2>How to delete your data</h2>
+  <p>Run <code>/deletedata</code> in any server where TL;DR Bot is present. This immediately and permanently removes your API key and all stored timestamps. You can verify by running <code>/tldr</code> — the bot will ask you to run <code>/setup</code> again.</p>
+
+  <h2>Third-party services</h2>
+  <p>When you run <code>/tldr</code>, channel messages are sent to the AI provider associated with your API key. Please review the privacy policy of your chosen provider:</p>
+  <ul>
+    <li><a href="https://www.anthropic.com/privacy" target="_blank">Anthropic Privacy Policy</a></li>
+    <li><a href="https://openai.com/policies/privacy-policy" target="_blank">OpenAI Privacy Policy</a></li>
+    <li><a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions or concerns? Open an issue on <a href="https://github.com/Shonky72/TL-DR-App" target="_blank">GitHub</a>.</p>
+
+  <footer>TL;DR Bot is an open-source project. This policy applies to the hosted instance run by the repository owner.</footer>
+</body>
+</html>

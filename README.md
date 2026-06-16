@@ -1,63 +1,77 @@
-# TL;DR Discord Bot
+# TL;DR Bot
 
-A Discord bot that summarizes messages you've missed since you last checked a channel, using Claude.
+A Discord bot that summarizes messages you missed since you last checked a channel, powered by your own AI API key.
 
-## How it works
+## Add to your server
 
-Run `/tldr` in any channel the bot is in. It looks at messages since the last time *you* ran `/tldr` there (or the last N hours if it's your first time), sends them to Claude, and replies privately to you with a bullet-point summary.
+**[Click here to invite TL;DR Bot](https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=68608&scope=bot%20applications.commands)**
 
-## Setup
+> Replace `YOUR_CLIENT_ID` with your Discord application ID before sharing this link.
 
-### 1. Create a Discord bot application
+### Getting started (3 steps)
 
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**.
-2. Name it (e.g. "TL;DR Bot") and create it.
-3. Go to the **Bot** tab, click **Reset Token**, and copy the token.
-4. Under **Privileged Gateway Intents**, toggle **Message Content Intent** ON and save. This is required for `/tldr` to read the actual text of messages — without it, Discord redacts message content and the bot can only see attachments/embeds.
-5. Go to **OAuth2 > General** and copy the **Application ID** (this is your `DISCORD_CLIENT_ID`).
+1. Add the bot to your server using the invite link above
+2. Run `/setup api_key:YOUR_KEY` — the bot detects your provider automatically
+3. Run `/tldr` in any channel to catch up on what you missed
 
-### 2. Invite the bot to your server
+### Where to get an API key
 
-1. Go to **OAuth2 > URL Generator**.
-2. Select scopes: `bot` and `applications.commands`.
-3. Select bot permissions: `View Channels`, `Read Message History`, `Send Messages`.
-4. Open the generated URL and invite the bot to your server (requires "Manage Server" permission on that server).
+| Provider | Link | Notes |
+|----------|------|-------|
+| Anthropic (Claude) | https://console.anthropic.com | Recommended |
+| OpenAI (GPT) | https://platform.openai.com | |
+| Google (Gemini) | https://aistudio.google.com | Free tier available |
+| Others | Any OpenAI-compatible API | Groq, Mistral, Together, etc. |
 
-### 3. Configure environment variables
+### Commands
 
-Copy `.env.example` to `.env` and fill in:
+| Command | Description |
+|---------|-------------|
+| `/setup api_key:YOUR_KEY` | Register your AI API key (run once) |
+| `/tldr` | Summarize messages since you last checked |
+| `/tldr hours:6` | Look back 6 hours (first run in a channel only) |
+| `/deletedata` | Permanently delete all your stored data |
 
-```
-DISCORD_TOKEN=<bot token from step 1>
-DISCORD_CLIENT_ID=<application id from step 1>
-ANTHROPIC_API_KEY=<your Anthropic API key>
-```
+---
 
-### 4. Register the slash command
+## Privacy
 
-```
-npm run register
-```
+[Privacy Policy](https://shonky72.github.io/TL-DR-App/privacy)
 
-(Re-run this any time you change `src/registerCommands.js`.)
+Your API key and channel timestamps are stored privately on Fly.io infrastructure. Message content is never stored — it is fetched on demand, summarised, and discarded. Run `/deletedata` at any time to erase everything.
 
-### 5. Run the bot
+---
 
-```
+## Self-hosting / development
+
+### Prerequisites
+- Node.js 20+
+- A Discord bot application ([Discord Developer Portal](https://discord.com/developers/applications))
+- An AI API key of your choice
+
+### Setup
+
+```powershell
+npm install
+cp .env.example .env
+# Fill in DISCORD_TOKEN and DISCORD_CLIENT_ID in .env
+npm run register   # register slash commands
 npm start
 ```
 
-## Usage
+### Deploying to Fly.io
 
-In any channel the bot can see, type:
+```powershell
+fly launch --no-deploy
+fly volumes create tldr_data --size 1
+fly secrets set DISCORD_TOKEN=xxx DISCORD_CLIENT_ID=xxx
+fly deploy
+```
 
-- `/tldr` — summarize everything since you last ran `/tldr` here (defaults to last 24h on first run)
-- `/tldr hours:6` — on first run in a channel, look back 6 hours instead of 24
+### Required bot permissions
+- View Channels
+- Read Message History
+- Send Messages
 
-The reply is ephemeral (only visible to you).
-
-## Notes / limits
-
-- Fetches a maximum of 500 messages per summary to keep things fast and cheap.
-- Each user's "last checked" time is tracked per-channel in `data/lastChecked.json`.
-- This is a real bot account, not a self-bot, so it only sees channels it's been invited into.
+### Required privileged intents (Discord Developer Portal → Bot)
+- Message Content Intent

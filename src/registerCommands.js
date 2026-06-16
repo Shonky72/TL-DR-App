@@ -13,6 +13,22 @@ const commands = [
         .setMaxValue(168)
     )
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("setup")
+    .setDescription("Register your AI API key to use /tldr (Anthropic, OpenAI, Google, and more)")
+    .addStringOption((option) =>
+      option
+        .setName("api_key")
+        .setDescription("Your API key")
+        .setRequired(true)
+    )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("deletedata")
+    .setDescription("Delete all data TL;DR Bot has stored about you (API key + history)")
+    .toJSON(),
 ];
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);

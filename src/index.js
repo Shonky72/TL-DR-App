@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { Client, GatewayIntentBits, Events, MessageFlags } from "discord.js";
-import { getLastChecked, setLastChecked } from "./storage.js";
+import { getLastChecked, setLastChecked, getUserApiKey, setUserApiKey, deleteUserData } from "./storage.js";
 import { summarizeMessages } from "./summarizer.js";
+import { detectProviderName } from "./providers.js";
 
 const MAX_MESSAGES = 500;
 const DEFAULT_HOURS = 24;
@@ -20,9 +21,42 @@ client.once(Events.ClientReady, (c) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName !== "tldr") return;
 
+  if (interaction.commandName === "setup") {
+    await handleSetup(interaction);
+  } else if (interaction.commandName === "tldr") {
+    await handleTldr(interaction);
+  } else if (interaction.commandName === "deletedata") {
+    await handleDeleteData(interaction);
+  }
+});
+
+async function handleSetup(interaction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const apiKey = interaction.options.getString("api_key");
+
+  if (!apiKey || apiKey.length < 20) {
+    return interaction.editReply({ content: "That doesn't look like a valid API key. Please check and try again." });
+  }
+
+  const providerName = detectProviderName(apiKey);
+  setUserApiKey(interaction.user.id, apiKey);
+
+  await interaction.editReply({
+    content: `✅ API key saved (detected: **${providerName}**). You can now use \`/tldr\` in any channel.`,
+  });
+}
+
+async function handleTldr(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const userApiKey = getUserApiKey(interaction.user.id);
+  if (!userApiKey) {
+    return interaction.editReply({
+      content:
+        "You haven't set up an API key yet. Run `/setup api_key:YOUR_KEY` first.\n\nGet a free key from:\n• **Anthropic:** https://console.anthropic.com\n• **OpenAI:** https://platform.openai.com\n• **Google:** https://aistudio.google.com",
+    });
+  }
 
   const channel = interaction.channel;
   const userId = interaction.user.id;
@@ -42,7 +76,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         timestamp: m.createdAt,
       }));
 
-    const summary = await summarizeMessages(formatted, channel.name);
+    const summary = await summarizeMessages(formatted, channel.name, userApiKey);
 
     setLastChecked(userId, channel.id, Date.now());
 
@@ -53,22 +87,27 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   } catch (err) {
     console.error(err);
+    const isPermission = err.code === 50001 || err.code === 50013;
     await interaction.editReply({
-      content: "Something went wrong generating the summary. Please try again.",
+      content: isPermission
+        ? "I don't have permission to read message history in this channel. Ask a server admin to grant me **View Channel** and **Read Message History**."
+        : "Something went wrong generating the summary. Your API key may be invalid or over quota — you can update it with `/setup`.",
     });
   }
-});
+}
 
-/**
- * Build a text description of a message, including any text content,
- * attachments (images/GIFs/files), and link embeds.
- */
+async function handleDeleteData(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  deleteUserData(interaction.user.id);
+  await interaction.editReply({
+    content: "✅ All your data has been deleted (API key + channel history). You'll need to run `/setup` again to use `/tldr`.",
+  });
+}
+
 function describeMessage(message) {
   const parts = [];
 
-  if (message.content) {
-    parts.push(message.content);
-  }
+  if (message.content) parts.push(message.content);
 
   for (const attachment of message.attachments.values()) {
     const contentType = attachment.contentType ?? "";
@@ -87,9 +126,6 @@ function describeMessage(message) {
   return parts.length > 0 ? parts.join(" ") : "[non-text content]";
 }
 
-/**
- * Fetch messages newer than `since` (ms epoch), oldest-first, capped at MAX_MESSAGES.
- */
 async function fetchMessagesSince(channel, since) {
   const collected = [];
   let before = undefined;
@@ -110,7 +146,6 @@ async function fetchMessagesSince(channel, since) {
     }
 
     if (reachedCutoff) break;
-
     before = batchArray[batchArray.length - 1].id;
   }
 
