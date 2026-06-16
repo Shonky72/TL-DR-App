@@ -95,13 +95,14 @@ async function handleTldr(interaction) {
       }));
 
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
+    const tally = buildTally(messages);
 
     setLastChecked(userId, channel.id, Date.now());
 
     await interaction.editReply({
       content: truncate(`**TL;DR for #${channel.name}** (${formatted.length} messages since ${
         lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
-      })\n\n${summary}`),
+      })\n\n${summary}${tally}`),
     });
   } catch (err) {
     console.error(err);
@@ -140,9 +141,10 @@ async function handleRecap(interaction) {
       }));
 
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
+    const tally = buildTally(messages);
 
     await interaction.editReply({
-      content: truncate(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}`),
+      content: truncate(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}${tally}`),
     });
   } catch (err) {
     console.error(err);
@@ -161,6 +163,40 @@ async function handleDeleteData(interaction) {
   await interaction.editReply({
     content: "✅ All your data has been deleted (API key + channel history). You'll need to run `/setup` again to use `/tldr`.",
   });
+}
+
+function buildTally(messages) {
+  const emojis = {};
+  const stickers = {};
+
+  for (const msg of messages) {
+    if (msg.author.bot) continue;
+
+    const matches = msg.content.matchAll(/<a?:(\w+):\d+>/g);
+    for (const [, name] of matches) {
+      emojis[name] = (emojis[name] ?? 0) + 1;
+    }
+
+    for (const sticker of msg.stickers.values()) {
+      stickers[sticker.name] = (stickers[sticker.name] ?? 0) + 1;
+    }
+  }
+
+  const lines = [];
+
+  const emojiEntries = Object.entries(emojis).sort((a, b) => b[1] - a[1]);
+  if (emojiEntries.length > 0) {
+    const emojiStr = emojiEntries.map(([name, count]) => `\`${name}\` ×${count}`).join("  ");
+    lines.push(`**Emoji usage:** ${emojiStr}`);
+  }
+
+  const stickerEntries = Object.entries(stickers).sort((a, b) => b[1] - a[1]);
+  if (stickerEntries.length > 0) {
+    const stickerStr = stickerEntries.map(([name, count]) => `\`${name}\` ×${count}`).join("  ");
+    lines.push(`**Stickers:** ${stickerStr}`);
+  }
+
+  return lines.length > 0 ? "\n\n" + lines.join("\n") : "";
 }
 
 function truncate(text) {
