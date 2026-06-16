@@ -17,7 +17,22 @@ const client = new Client({
 
 client.once(Events.ClientReady, (c) => {
   console.log(`Logged in as ${c.user.tag}`);
+  postTopggStats();
+  setInterval(postTopggStats, 30 * 60 * 1000);
 });
+
+async function postTopggStats() {
+  if (!process.env.TOPGG_TOKEN) return;
+  try {
+    await fetch(`https://top.gg/api/bots/${client.user.id}/stats`, {
+      method: "POST",
+      headers: { Authorization: process.env.TOPGG_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ server_count: client.guilds.cache.size }),
+    });
+  } catch (err) {
+    console.error("Failed to post Top.gg stats:", err.message);
+  }
+}
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;

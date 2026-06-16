@@ -4,9 +4,9 @@ A Discord bot that summarizes messages you missed since you last checked a chann
 
 ## Add to your server
 
-**[Click here to invite TL;DR Bot](https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=68608&scope=bot%20applications.commands)**
+**[Click here to invite TL;DR Bot](https://discord.com/api/oauth2/authorize?client_id=1516071339159589058&permissions=68608&scope=bot%20applications.commands)**
 
-> Replace `YOUR_CLIENT_ID` with your Discord application ID before sharing this link.
+> Replace `1516071339159589058` with your Discord application ID before sharing this link.
 
 ### Getting started (3 steps)
 
