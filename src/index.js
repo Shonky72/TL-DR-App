@@ -95,17 +95,20 @@ async function handleTldr(interaction) {
       }));
 
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
-    const tally = buildTally(messages);
+    const { tallyLine, card } = buildTally(messages);
 
     setLastChecked(userId, channel.id, Date.now());
 
     const header = `**TL;DR for #${channel.name}** (${formatted.length} messages since ${
       lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
     })`;
-    const chunks = splitIntoChunks(`${header}\n\n${summary}${tally}`);
+    const chunks = splitIntoChunks(`${header}\n\n${summary}${tallyLine}`);
     await interaction.editReply({ content: chunks[0] });
     for (const chunk of chunks.slice(1)) {
       await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
+    }
+    if (card) {
+      await interaction.followUp({ content: card, flags: MessageFlags.Ephemeral });
     }
   } catch (err) {
     console.error(err);
@@ -144,12 +147,15 @@ async function handleRecap(interaction) {
       }));
 
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
-    const tally = buildTally(messages);
+    const { tallyLine, card } = buildTally(messages);
 
-    const chunks = splitIntoChunks(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}${tally}`);
+    const chunks = splitIntoChunks(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}${tallyLine}`);
     await interaction.editReply({ content: chunks[0] });
     for (const chunk of chunks.slice(1)) {
       await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
+    }
+    if (card) {
+      await interaction.followUp({ content: card, flags: MessageFlags.Ephemeral });
     }
   } catch (err) {
     console.error(err);
@@ -171,37 +177,36 @@ async function handleDeleteData(interaction) {
 }
 
 function buildTally(messages) {
+  // key = "name:id", value = { animated, name, id, count }
   const emojis = {};
-  const stickers = {};
 
   for (const msg of messages) {
     if (msg.author.bot) continue;
-
-    const matches = msg.content.matchAll(/<a?:(\w+):\d+>/g);
-    for (const [, name] of matches) {
-      emojis[name] = (emojis[name] ?? 0) + 1;
-    }
-
-    for (const sticker of msg.stickers.values()) {
-      stickers[sticker.name] = (stickers[sticker.name] ?? 0) + 1;
+    const matches = msg.content.matchAll(/<(a?):(\w+):(\d+)>/g);
+    for (const [, animated, name, id] of matches) {
+      const key = `${name}:${id}`;
+      if (!emojis[key]) emojis[key] = { animated: animated === "a", name, id, count: 0 };
+      emojis[key].count++;
     }
   }
 
-  const lines = [];
+  const entries = Object.values(emojis).sort((a, b) => b.count - a.count);
+  if (entries.length === 0) return { tallyLine: "", card: "" };
 
-  const emojiEntries = Object.entries(emojis).sort((a, b) => b[1] - a[1]);
-  if (emojiEntries.length > 0) {
-    const emojiStr = emojiEntries.map(([name, count]) => `\`${name}\` ×${count}`).join("  ");
-    lines.push(`**Emoji usage:** ${emojiStr}`);
-  }
+  const tallyLine = "\n\n**Emoji usage:** " +
+    entries.map(({ animated, name, id, count }) =>
+      `<${animated ? "a" : ""}:${name}:${id}> ×${count}`
+    ).join("  ");
 
-  const stickerEntries = Object.entries(stickers).sort((a, b) => b[1] - a[1]);
-  if (stickerEntries.length > 0) {
-    const stickerStr = stickerEntries.map(([name, count]) => `\`${name}\` ×${count}`).join("  ");
-    lines.push(`**Stickers:** ${stickerStr}`);
-  }
+  // Emoji-only message — renders large in Discord (capped at 10 per emoji)
+  const card = entries
+    .map(({ animated, name, id, count }) => {
+      const tag = `<${animated ? "a" : ""}:${name}:${id}>`;
+      return Array(Math.min(count, 10)).fill(tag).join("");
+    })
+    .join("\n");
 
-  return lines.length > 0 ? "\n\n" + lines.join("\n") : "";
+  return { tallyLine, card };
 }
 
 function splitIntoChunks(text) {
