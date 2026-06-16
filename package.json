@@ -1,0 +1,16 @@
+{
+  "name": "tldr-discord-bot",
+  "version": "1.0.0",
+  "description": "A Discord bot that summarizes messages you missed since you last checked",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "register": "node src/registerCommands.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  }
+}

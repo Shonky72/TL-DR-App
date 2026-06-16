@@ -1,0 +1,11 @@
+app = "tldr-discord-bot"
+primary_region = "ord"
+
+[build]
+
+[[mounts]]
+  source = "tldr_data"
+  destination = "/data"
+
+[env]
+  DATA_DIR = "/data"
