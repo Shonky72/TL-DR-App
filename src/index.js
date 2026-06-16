@@ -95,14 +95,14 @@ async function handleTldr(interaction) {
       }));
 
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
-    const { tallyLine, card } = buildTally(messages);
+    const { card } = buildTally(messages);
 
     setLastChecked(userId, channel.id, Date.now());
 
     const header = `**TL;DR for #${channel.name}** (${formatted.length} messages since ${
       lastChecked ? new Date(lastChecked).toLocaleString() : `${DEFAULT_HOURS}h ago`
     })`;
-    const chunks = splitIntoChunks(`${header}\n\n${summary}${tallyLine}`);
+    const chunks = splitIntoChunks(`${header}\n\n${summary}`);
     await interaction.editReply({ content: chunks[0] });
     for (const chunk of chunks.slice(1)) {
       await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
@@ -147,9 +147,9 @@ async function handleRecap(interaction) {
       }));
 
     const summary = await summarizeMessages(formatted, channel.name, userApiKey);
-    const { tallyLine, card } = buildTally(messages);
+    const { card } = buildTally(messages);
 
-    const chunks = splitIntoChunks(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}${tallyLine}`);
+    const chunks = splitIntoChunks(`**Last ${hours}h recap for #${channel.name}** (${formatted.length} messages)\n\n${summary}`);
     await interaction.editReply({ content: chunks[0] });
     for (const chunk of chunks.slice(1)) {
       await interaction.followUp({ content: chunk, flags: MessageFlags.Ephemeral });
@@ -193,22 +193,17 @@ function buildTally(messages) {
   const entries = Object.values(emojis).sort((a, b) => b.count - a.count);
   if (entries.length === 0) return { tallyLine: "", card: "" };
 
-  const tallyLine = "\n\n**Emoji usage:** " +
-    entries.map(({ animated, name, id, count }) =>
-      `<${animated ? "a" : ""}:${name}:${id}> ×${count}`
-    ).join("  ");
-
-  // Podium card — emoji-only so Discord renders them large
+  // Podium card — one emoji per line with medal and count
   const medals = ["🥇", "🥈", "🥉"];
   const card = entries
     .map(({ animated, name, id, count }, i) => {
       const tag = `<${animated ? "a" : ""}:${name}:${id}>`;
-      const medal = medals[i] ?? "";
-      return medal + tag.repeat(Math.max(1, Math.min(count, 5)));
+      const medal = medals[i] ?? "▫️";
+      return `${medal} ${tag} ×${count}`;
     })
     .join("\n");
 
-  return { tallyLine, card };
+  return { card };
 }
 
 function splitIntoChunks(text) {
